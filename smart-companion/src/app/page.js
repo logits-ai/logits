@@ -169,7 +169,7 @@ export default function Home() {
   const { coins, setCoins } = useUser(); 
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [greetingIndex, setGreetingIndex] = useState(0); // Added for smooth text
+  const [greetingIndex, setGreetingIndex] = useState(0); // For smooth text cycling
   const router = useRouter();
   
   const [energyLevel, setEnergyLevel] = useState(60);
@@ -183,19 +183,19 @@ export default function Home() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [voiceType, setVoiceType] = useState('asmr'); 
 
-  // --- OPTIMIZED LOADING ANIMATION ---
+  // --- OPTIMIZED LOADING ANIMATION LOGIC ---
   const greetings = ["Hello", "नमस्ते", "Hola"];
 
   useEffect(() => {
-    // Cycle text
+    // 1. Cycle through greetings
     const greetingInterval = setInterval(() => {
       setGreetingIndex((prev) => (prev + 1) % greetings.length);
     }, 800);
 
-    // End loading
+    // 2. End loading after 2.5s
     const timer = setTimeout(() => {
-      setIsLoading(false);
       clearInterval(greetingInterval);
+      setIsLoading(false);
     }, 2600);
 
     return () => {
@@ -207,9 +207,8 @@ export default function Home() {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
   const isListeningRef = useRef(false); 
-  const spaceTimerRef = useRef(null);
-  const isSpaceHeldRef = useRef(false);
-
+  // Removed top-level refs for space bar to keep logic contained in effect
+  
   useEffect(() => { isListeningRef.current = isListening; }, [isListening]);
 
   useEffect(() => {
@@ -223,7 +222,7 @@ export default function Home() {
       recognition.onresult = (e) => {
         const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
         setInput(transcript);
-        if (/\b(panic|help|stop)\b/i.test(transcript)) {
+        if (/\b(panic)\b/i.test(transcript)) {
             setPanicMode(true);
             stopListening();
         }
@@ -253,37 +252,57 @@ export default function Home() {
     else startListening();
   };
 
+  // --- UPDATED: SPACE BAR HOLD (1 Second) ---
   useEffect(() => {
+    let spaceTimer = null;
+    let isSpaceHeld = false;
+
     const handleKeyDown = (e) => {
       if (e.code === 'Space') {
         const tag = document.activeElement.tagName;
+        // Don't trigger if typing in a text field
         if (tag !== 'TEXTAREA' && tag !== 'INPUT') {
           e.preventDefault(); 
-          if (isSpaceHeldRef.current) return;
-          isSpaceHeldRef.current = true;
-          spaceTimerRef.current = setTimeout(() => {
-            if (isSpaceHeldRef.current) {
+          
+          if (isSpaceHeld) return; // Prevent repeat triggers
+          isSpaceHeld = true;
+
+          // Start 1-second timer (1000ms)
+          spaceTimer = setTimeout(() => {
+            if (isSpaceHeld) {
                startListening();
                triggerToast("🎤 Mic Active (Release to Stop)");
             }
-          }, 2000);
+          }, 1000); // Changed from 2000 to 1000
         }
       }
     };
+
     const handleKeyUp = (e) => {
       if (e.code === 'Space') {
-        isSpaceHeldRef.current = false;
-        if (spaceTimerRef.current) { clearTimeout(spaceTimerRef.current); spaceTimerRef.current = null; }
-        if (isListeningRef.current) { stopListening(); triggerToast("Mic Off"); }
+        isSpaceHeld = false;
+        
+        // If released before 1s, clear timer
+        if (spaceTimer) { 
+          clearTimeout(spaceTimer); 
+          spaceTimer = null; 
+        }
+        
+        // If holding longer than 1s (Mic is ON), stop it
+        if (isListeningRef.current) { 
+          stopListening(); 
+          triggerToast("Mic Off"); 
+        }
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, []); // Logic contained in effect, no external refs needed
 
   const handleStart = () => {
     if (!input.trim()) return;
@@ -365,7 +384,7 @@ export default function Home() {
         {/* === TOAST === */}
         <AnimatePresence>{message && <motion.div initial={{ y: -50 }} animate={{ y: 0 }} exit={{ y: -50 }} className="fixed top-6 left-1/2 -translate-x-1/2 z-[250] bg-slate-800 text-white px-6 py-3 rounded-full font-bold shadow-xl flex items-center gap-2"><Sparkles className="w-4 h-4 text-yellow-400" /> {message}</motion.div>}</AnimatePresence>
 
-        {/* === OPTIMIZED SMOOTH LOADING (Fade instead of Scroll) === */}
+        {/* === OPTIMIZED SMOOTH FADE LOADING === */}
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div 
@@ -397,7 +416,7 @@ export default function Home() {
                          initial={{ opacity: 0, scale: 0.95 }}
                          animate={{ opacity: 1, scale: 1 }}
                          exit={{ opacity: 0, scale: 1.05 }}
-                         transition={{ duration: 0.5, ease: "easeInOut" }}
+                         transition={{ duration: 0.5, ease: "easeOut" }}
                          className="text-6xl md:text-8xl font-light text-white tracking-[0.2em] absolute"
                        >
                           {greetings[greetingIndex]}
@@ -463,7 +482,6 @@ export default function Home() {
                     </button>
 
                     {/* === FINGERPRINT MOVED OUTSIDE === */}
-                    {/* This ensures it's visible when the menu is CLOSED, allowing you to open it */}
                     {!showRecharge && (
                         <div className="mt-4">
                             <HoldToConnect onUnlock={handleUnlock} mode={accessMode} />
