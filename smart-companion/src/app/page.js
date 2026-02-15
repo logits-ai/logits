@@ -2,432 +2,545 @@
 import { useState, useEffect, useRef } from 'react';
 import { useUser } from '@/context/UserContext'; 
 import { useRouter } from 'next/navigation';
-import DopamineMenu from '@/components/DopamineMenu'; // Ensure you have this component created!
 import { 
-  Mic, MicOff, ArrowRight, Type, Sparkles, BrainCircuit, 
-  User, HelpCircle, Flag, Mail, X, Trash2, Search, Camera, Zap, 
-  Unlock, ChevronRight, Lock 
+  Mic, MicOff, ArrowRight, Sparkles, User, X, Zap, Eye, 
+  Music, Coffee, Wind, Youtube, Coins, Activity, Droplets, Gem, Fingerprint, BrainCircuit
 } from 'lucide-react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 
-// --- COMPONENT 1: LIQUID PLASMA ENERGY SLIDER ---
-const LiquidEnergySlider = ({ value, onChange }) => {
-  const getColor = (val) => {
-    if (val < 30) return "from-blue-400 to-cyan-300"; 
-    if (val < 70) return "from-indigo-500 to-purple-400"; 
-    return "from-pink-500 to-rose-500"; 
-  };
+// --- IMPORTS ---
+import PanicMode from '@/app/PanicMode'; 
+import SuccessConfetti from '@/app/SuccessConfetti';
+import AccessibilityToggle from '@/app/AccessibilityToggle';
+
+// ==========================================
+// 1. INLINE COMPONENTS
+// ==========================================
+
+const EnergyCrystals = ({ value, onChange, mode }) => {
+  const levels = [20, 40, 60, 80, 100];
+  const isHighContrast = mode === 'highContrast';
 
   return (
-    <div className="w-full relative h-12 flex items-center justify-center">
-      <div className="absolute left-4 z-10 text-xs font-bold text-slate-500 uppercase tracking-wider pointer-events-none">
-        Energy Level
+    <div className={`w-full flex flex-col items-center gap-3 ${isHighContrast ? 'p-4 border-2 border-yellow-400 bg-black' : ''}`}>
+      <div className="flex justify-between w-full px-4 items-center">
+         {levels.map((level, index) => {
+            const isActive = value >= level;
+            return (
+               <button key={level} onClick={() => onChange(level)} className="group relative flex flex-col items-center gap-2 focus:outline-none">
+                  <motion.div 
+                     whileHover={{ scale: 1.2 }}
+                     whileTap={{ scale: 0.9 }}
+                     animate={{ scale: isActive ? 1.1 : 1, filter: isActive ? "grayscale(0%)" : "grayscale(100%) opacity(30%)" }}
+                     className={`p-3 rounded-2xl transition-all duration-300 shadow-sm border-2
+                        ${isActive 
+                            ? (isHighContrast ? 'bg-yellow-400 border-yellow-400' : 'border-amber-400 bg-amber-100') 
+                            : (isHighContrast ? 'border-gray-600 bg-gray-900' : 'border-stone-300 bg-stone-100')
+                        }
+                     `}
+                  >
+                     <Gem size={22} className={isActive ? (isHighContrast ? 'text-black' : 'text-amber-700') : 'text-stone-400'} />
+                  </motion.div>
+               </button>
+            );
+         })}
       </div>
-      <div className="absolute inset-0 bg-slate-100 rounded-2xl overflow-hidden border border-slate-200">
-        <motion.div 
-          className={`h-full bg-gradient-to-r ${getColor(value)} relative`}
-          initial={{ width: 0 }}
-          animate={{ width: `${value}%` }}
-          transition={{ type: "spring", bounce: 0, duration: 0.3 }}
-        >
-           <motion.div 
-             animate={{ x: ["0%", "100%"] }}
-             transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-             className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent w-full" 
-           />
-           <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-white shadow-[0_0_10px_white]"></div>
-        </motion.div>
-      </div>
-      <input 
-        type="range" min="0" max="100" value={value} 
-        onChange={(e) => onChange(e.target.value)}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-      />
-      <div className="absolute right-4 z-10 font-bold text-slate-600 pointer-events-none">{value}%</div>
+      <div className="text-xs font-bold uppercase tracking-[0.2em] opacity-60">Current Bandwidth</div>
     </div>
   );
 };
 
-// --- COMPONENT 2: FUTURISTIC SLIDE-TO-UNLOCK ---
-const SlideToUnlock = ({ onUnlock, isUnlocked }) => {
-  const constraintsRef = useRef(null);
-  const x = useMotionValue(0);
-  const backgroundOpacity = useTransform(x, [0, 260], [0, 1]);
+const HoldToConnect = ({ onUnlock, mode }) => {
+  const [holding, setHolding] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const intervalRef = useRef(null);
+
+  useEffect(() => {
+    if (progress >= 100) {
+      clearInterval(intervalRef.current);
+      onUnlock(); 
+      setProgress(0);
+      setHolding(false);
+    }
+  }, [progress, onUnlock]);
+
+  const startHold = () => {
+    setHolding(true);
+    intervalRef.current = setInterval(() => {
+      setProgress((prev) => (prev >= 100 ? 100 : prev + 2.5));
+    }, 16);
+  };
+
+  const stopHold = () => {
+    setHolding(false);
+    clearInterval(intervalRef.current);
+    setProgress(0);
+  };
 
   return (
-    <div className="relative w-full h-16 bg-slate-100/50 backdrop-blur-sm rounded-full border border-slate-200 shadow-inner overflow-hidden flex items-center p-1" ref={constraintsRef}>
-      
-      {/* Dynamic Background Fill */}
-      <motion.div 
-        style={{ opacity: backgroundOpacity }}
-        className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-emerald-500/20"
-      />
-      
-      {/* Text Label */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-         <AnimatePresence mode="wait">
-            {isUnlocked ? (
-               <motion.div 
-                 initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                 className="flex items-center gap-2 text-emerald-600 font-bold tracking-widest uppercase"
-               >
-                  <Unlock size={18} /> Access Granted
-               </motion.div>
-            ) : (
-               <motion.div 
-                 initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
-                 className="flex items-center gap-2 text-slate-400 font-medium tracking-widest text-sm uppercase"
-               >
-                  Slide to Recharge <ChevronRight size={16} className="animate-pulse" />
-               </motion.div>
-            )}
-         </AnimatePresence>
-      </div>
-
-      {/* Draggable Handle */}
-      <motion.div
-        drag="x"
-        dragConstraints={constraintsRef}
-        dragElastic={0}
-        dragMomentum={false}
-        onDragEnd={(event, info) => {
-           if (info.offset.x > 200) { // Threshold to unlock
-              onUnlock();
-           } 
-        }}
-        style={{ x, backgroundColor: isUnlocked ? "#10b981" : "#4f46e5" }}
-        animate={isUnlocked ? { x: "calc(100% - 10px)" } : { x: 0 }}
-        className="relative z-10 w-14 h-14 rounded-full shadow-lg flex items-center justify-center cursor-grab active:cursor-grabbing hover:scale-105 transition-transform"
+    <div className="w-full flex justify-center py-4">
+      <div 
+        className="relative group cursor-pointer"
+        onMouseDown={startHold}
+        onMouseUp={stopHold}
+        onMouseLeave={stopHold}
+        onTouchStart={startHold}
+        onTouchEnd={stopHold}
       >
-         {isUnlocked ? <Zap className="text-white w-6 h-6 fill-white" /> : <ChevronRight className="text-white w-8 h-8" />}
-         <div className="absolute inset-0 rounded-full bg-white opacity-20 animate-ping"></div>
-      </motion.div>
+        <svg width="120" height="120" viewBox="0 0 120 120" className="transform -rotate-90">
+           <circle cx="60" cy="60" r="54" stroke="currentColor" strokeOpacity="0.2" strokeWidth="8" fill="transparent" />
+           <motion.circle 
+             cx="60" cy="60" r="54" 
+             stroke="currentColor" 
+             strokeWidth="8" 
+             fill="transparent"
+             strokeDasharray="339.292"
+             strokeDashoffset={339.292 - (339.292 * progress) / 100}
+             strokeLinecap="round"
+           />
+        </svg>
+        <div className="absolute top-2 left-2 w-[104px] h-[104px] rounded-full border-2 flex flex-col items-center justify-center z-10 bg-white/50 border-stone-200">
+           <Fingerprint size={32} className="mb-1 transition-colors opacity-70" />
+           <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">{holding ? "Syncing..." : "Hold"}</span>
+        </div>
+      </div>
     </div>
   );
+};
+
+const BreathingModal = ({ onClose }) => {
+  const [phase, setPhase] = useState("Ready");
+  const audioRef = useRef(null);
+
+  const startSession = () => {
+    const audio = new Audio("/traian1984-ambience-wind-blowing-through-trees-01-186986.mp3"); 
+    audio.loop = true;
+    audio.volume = 0.5;
+    audio.play().catch(e => console.error("Audio blocked:", e));
+    audioRef.current = audio;
+    
+    let p = 0;
+    const phases = ["Inhale (4s)", "Hold (4s)", "Exhale (4s)"];
+    setPhase(phases[0]);
+    
+    const interval = setInterval(() => {
+        p = (p + 1) % 3;
+        setPhase(phases[p]);
+    }, 4000);
+    
+    return () => {
+        clearInterval(interval);
+        if (audioRef.current) { audioRef.current.pause(); }
+    };
+  };
+
+  useEffect(() => {
+    const cleanup = startSession();
+    return cleanup;
+  }, []);
+
+  return (
+    <div className="p-8 text-center flex flex-col items-center">
+       <h3 className="text-xl font-bold mb-6 flex items-center gap-2"><Wind /> Zen Mode</h3>
+       <motion.div 
+         animate={{ scale: phase.includes("Inhale") ? 1.5 : phase.includes("Hold") ? 1.5 : 1 }} 
+         transition={{ duration: 4, ease: "easeInOut" }} 
+         className="w-40 h-40 rounded-full bg-teal-500/20 flex items-center justify-center border-4 border-teal-500 mb-6"
+       >
+          <span className="font-bold text-xl text-teal-800">{phase}</span>
+       </motion.div>
+       <button onClick={onClose} className="mt-4 text-xs font-bold uppercase tracking-widest text-red-500 hover:text-red-700">End Session</button>
+    </div>
+  );
+};
+
+// ==========================================
+// 2. MAIN PAGE COMPONENT
+// ==========================================
+
+const ACCESSIBILITY_MODES = {
+  default: { label: "Default", bg: "#FFF8F0", text: "#4A3B32", font: '"Inter", sans-serif', animation: true },
+  highContrast: { label: "High Contrast", bg: "#000000", text: "#FFFF00", font: 'Arial, sans-serif', border: '2px solid #FFFF00', animation: false },
+  soft: { label: "Soft (Dyslexia)", bg: "#FDF6E3", text: "#5D4037", font: 'OpenDyslexic, Verdana', lineHeight: "2.0", animation: true },
+  adhd: { label: "ADHD Focus", bg: "#F0F4F8", text: "#102A43", font: 'Verdana, sans-serif', spacing: "wide", animation: true }
 };
 
 export default function Home() {
-  const { toggleFont, isDyslexic } = useUser();
+  const { coins, setCoins } = useUser(); 
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(true);
+  const [greetingIndex, setGreetingIndex] = useState(0); // Added for smooth text
   const router = useRouter();
   
-  // Energy State
-  const [energyLevel, setEnergyLevel] = useState(50);
-  
-  // Dopamine Menu State
-  const [showDopamine, setShowDopamine] = useState(false);
+  const [energyLevel, setEnergyLevel] = useState(60);
+  const [showRecharge, setShowRecharge] = useState(false);
+  const [activeFeature, setActiveFeature] = useState(null); 
+  const [message, setMessage] = useState(null);
 
-  // Menu Hover Logic
-  const [showMenu, setShowMenu] = useState(false);
-  const closeTimeoutRef = useRef(null);
+  const [accessMode, setAccessMode] = useState('default');
+  const [showAccessMenu, setShowAccessMenu] = useState(false);
+  const [panicMode, setPanicMode] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [voiceType, setVoiceType] = useState('asmr'); 
 
-  const handleMouseEnter = () => {
-    if (closeTimeoutRef.current) {
-      clearTimeout(closeTimeoutRef.current);
-      closeTimeoutRef.current = null;
-    }
-    setShowMenu(true);
-  };
-
-  const handleMouseLeave = () => {
-    closeTimeoutRef.current = setTimeout(() => {
-      setShowMenu(false);
-    }, 300);
-  };
-
-  // Voice & Greeting
-  const [isListening, setIsListening] = useState(false);
-  const [greeting, setGreeting] = useState("Hello");
-  const recognitionRef = useRef(null);
+  // --- OPTIMIZED LOADING ANIMATION ---
+  const greetings = ["Hello", "नमस्ते", "Hola"];
 
   useEffect(() => {
-    const hours = new Date().getHours();
-    const name = "Manzar"; 
-    let timeGreeting = "Good morning";
-    if (hours >= 12) timeGreeting = "Good afternoon";
-    if (hours >= 17) timeGreeting = "Good evening";
-    setGreeting(`Hi ${name}, ${timeGreeting.toLowerCase()}!`);
+    // Cycle text
+    const greetingInterval = setInterval(() => {
+      setGreetingIndex((prev) => (prev + 1) % greetings.length);
+    }, 800);
+
+    // End loading
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      clearInterval(greetingInterval);
+    }, 2600);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(greetingInterval);
+    };
   }, []);
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
+  const isListeningRef = useRef(false); 
+  const spaceTimerRef = useRef(null);
+  const isSpaceHeldRef = useRef(false);
+
+  useEffect(() => { isListeningRef.current = isListening; }, [isListening]);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true; 
-      recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'en-US';
-      recognitionRef.current.onresult = (e) => {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+      
+      recognition.onresult = (e) => {
         const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
         setInput(transcript);
+        if (/\b(panic|help|stop)\b/i.test(transcript)) {
+            setPanicMode(true);
+            stopListening();
+        }
       };
-      recognitionRef.current.onend = () => { if (isListening) setIsListening(false); };
+      recognition.onend = () => { setIsListening(false); };
+      recognitionRef.current = recognition;
     }
-  }, [isListening]);
+  }, []);
+
+  const startListening = () => {
+    if (recognitionRef.current && !isListeningRef.current) {
+        try { recognitionRef.current.start(); setIsListening(true); } 
+        catch (e) { console.error("Mic error", e); }
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current && isListeningRef.current) {
+        recognitionRef.current.stop();
+        setIsListening(false);
+    }
+  };
 
   const toggleVoiceInput = () => {
     if (!recognitionRef.current) return alert("Browser not supported");
-    isListening ? (recognitionRef.current.stop(), setIsListening(false)) : (recognitionRef.current.start(), setIsListening(true));
+    if (isListening) stopListening();
+    else startListening();
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 4000);
-    return () => clearTimeout(timer);
+    const handleKeyDown = (e) => {
+      if (e.code === 'Space') {
+        const tag = document.activeElement.tagName;
+        if (tag !== 'TEXTAREA' && tag !== 'INPUT') {
+          e.preventDefault(); 
+          if (isSpaceHeldRef.current) return;
+          isSpaceHeldRef.current = true;
+          spaceTimerRef.current = setTimeout(() => {
+            if (isSpaceHeldRef.current) {
+               startListening();
+               triggerToast("🎤 Mic Active (Release to Stop)");
+            }
+          }, 2000);
+        }
+      }
+    };
+    const handleKeyUp = (e) => {
+      if (e.code === 'Space') {
+        isSpaceHeldRef.current = false;
+        if (spaceTimerRef.current) { clearTimeout(spaceTimerRef.current); spaceTimerRef.current = null; }
+        if (isListeningRef.current) { stopListening(); triggerToast("Mic Off"); }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, []);
 
   const handleStart = () => {
     if (!input.trim()) return;
     localStorage.setItem("userTask", input);
-    router.push("/dashboard");
+    localStorage.setItem("userEnergy", energyLevel);
+    localStorage.setItem("voiceType", voiceType); 
+    setShowConfetti(true);
+    setTimeout(() => { router.push("/dashboard"); }, 1500);
+  };
+
+  const triggerToast = (msg) => {
+      setMessage(msg);
+      setTimeout(() => setMessage(null), 2000);
   };
 
   const handleUnlock = () => {
-    setShowDopamine(true); 
-    // Auto-scroll to menu
-    setTimeout(() => {
-      document.getElementById('dopamine-section')?.scrollIntoView({ behavior: 'smooth' });
-    }, 300);
+    setShowRecharge(true); 
+    setTimeout(() => { document.getElementById('recharge-section')?.scrollIntoView({ behavior: 'smooth' }); }, 300);
   };
 
+  const openLink = (url) => window.open(url, '_blank');
+
+  const currentStyle = ACCESSIBILITY_MODES[accessMode];
+  const isReducedMotion = !currentStyle.animation || panicMode; 
+
   return (
-    <div className={`min-h-screen relative overflow-hidden bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100 selection:text-indigo-700 ${isDyslexic ? 'font-dyslexic' : ''}`}>
-      
-      {/* ==================== 1. HOVER MENU ==================== */}
-      <AnimatePresence>
-        {showMenu && (
-          <motion.div 
-            initial={{ opacity: 0, y: -10, scale: 0.95 }} 
-            animate={{ opacity: 1, y: 0, scale: 1 }} 
-            exit={{ opacity: 0, y: -10, scale: 0.95 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            className="fixed top-28 left-1/2 -translate-x-1/2 z-[200] w-full max-w-sm"
-            onMouseEnter={handleMouseEnter}
-            onMouseLeave={handleMouseLeave}
-          >
-            <div className="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden border border-white/50 mx-4 ring-1 ring-black/5">
-               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                  <div className="flex items-center gap-3">
-                     <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                        <BrainCircuit className="w-5 h-5 text-indigo-600" />
-                     </div>
-                     <h3 className="font-bold text-slate-800 text-sm">System Menu</h3>
-                  </div>
-               </div>
-               <div className="p-2 space-y-1">
-                  {[
-                    { icon: HelpCircle, title: "Help Guide", sub: "Task decomposition tips" },
-                    { icon: Flag, title: "Report Issue", sub: "Found a bug?" },
-                    { icon: Mail, title: "Contact Us", sub: "Get in touch" }
-                  ].map((item, idx) => (
-                    <button key={idx} className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-indigo-50 transition-colors group text-left">
-                       <item.icon className="w-5 h-5 text-slate-400 group-hover:text-indigo-600 transition-colors" />
-                       <div>
-                          <div className="font-bold text-sm text-slate-700 group-hover:text-indigo-700">{item.title}</div>
-                          <div className="text-[10px] text-slate-400">{item.sub}</div>
-                       </div>
-                    </button>
-                  ))}
-               </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <MotionConfig reducedMotion={isReducedMotion ? "always" : "never"}>
+      <style jsx global>{`
+        @font-face {
+          font-family: 'OpenDyslexic';
+          src: url('https://cdn.jsdelivr.net/npm/opendyslexic@2.1.0-beta1/resources/fonts/OpenDyslexic-Regular.woff2') format('woff2');
+        }
+        body { 
+          background-color: ${currentStyle.bg} !important; 
+          color: ${currentStyle.text} !important; 
+          transition: background-color 0.5s ease;
+        }
+      `}</style>
 
-      {/* ==================== 2. MAIN UI ==================== */}
-      <AnimatePresence mode="wait">
-        {isLoading ? (
-          <motion.div
-            key="splash"
-            initial={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.1, filter: "blur(10px)" }}
-            transition={{ duration: 0.8 }}
-            className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black overflow-hidden"
-          >
-             <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,_rgba(79,70,229,0.15),transparent_70%)]"></div>
+      <div className="min-h-screen relative overflow-hidden transition-all duration-300" style={{ fontFamily: currentStyle.font }}>
+        
+        {!panicMode && <SuccessConfetti trigger={showConfetti} />}
+
+        {/* === HEADER === */}
+        <div className="absolute top-6 right-6 flex gap-3 z-50">
+           <div className="relative flex gap-2">
+             <AccessibilityToggle highContrast={accessMode === 'highContrast'} setHighContrast={() => setAccessMode(accessMode === 'highContrast' ? 'default' : 'highContrast')} />
              
-             <div className="relative flex items-center justify-center">
-                <motion.div 
-                    animate={{ rotate: 360 }}
-                    transition={{ repeat: Infinity, duration: 8, ease: "linear" }}
-                    className="absolute w-64 h-64 rounded-full border-[1px] border-indigo-500/30 border-t-indigo-500 border-b-transparent"
-                />
-                <motion.div 
-                    animate={{ rotate: -360 }}
-                    transition={{ repeat: Infinity, duration: 5, ease: "linear" }}
-                    className="absolute w-48 h-48 rounded-full border-[1px] border-purple-500/30 border-r-purple-500 border-l-transparent"
-                />
-                <motion.div 
-                    animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                    transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-                    className="w-20 h-20 bg-indigo-600 rounded-full blur-xl absolute"
-                />
-                <motion.div 
-                   initial={{ opacity: 0, scale: 0.5 }}
-                   animate={{ opacity: 1, scale: 1 }}
-                   transition={{ delay: 0.5 }}
-                   className="relative z-10 bg-black p-4 rounded-full border border-indigo-500/50 shadow-[0_0_50px_rgba(79,70,229,0.5)]"
-                >
-                   <BrainCircuit className="w-12 h-12 text-white" />
-                </motion.div>
-             </div>
-
-             <div className="mt-12 space-y-2 text-center z-10">
-                 <motion.h1 
-                    initial={{ opacity: 0, y: 10 }} 
-                    animate={{ opacity: 1, y: 0 }} 
-                    transition={{ delay: 1 }}
-                    className="text-3xl font-bold text-white tracking-[0.2em]"
-                 >
-                    SAHAYAK NEO
-                 </motion.h1>
-                 <motion.div 
-                    className="flex gap-1 justify-center"
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
-                    transition={{ delay: 1.5 }}
-                 >
-                     <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce delay-75"></span>
-                     <span className="w-2 h-2 bg-purple-500 rounded-full animate-bounce delay-150"></span>
-                     <span className="w-2 h-2 bg-pink-500 rounded-full animate-bounce delay-300"></span>
-                 </motion.div>
-             </div>
-          </motion.div>
-        ) : (
-          <motion.main
-            key="home"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1 }}
-            className="min-h-screen flex flex-col items-center justify-start pt-28 p-6 relative"
-          >
-            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-                <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-purple-300/30 rounded-full blur-3xl opacity-70 animate-blob"></div>
-                <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-blue-300/30 rounded-full blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-            </div>
-
-            <div className="absolute top-6 right-6 flex gap-3 z-50">
-               <button onClick={() => router.push('/profile')} className="p-3 bg-white/40 border border-white/60 rounded-xl hover:bg-white/60 transition-all"><User className="w-5 h-5 text-slate-600" /></button>
-               <button onClick={toggleFont} className="p-3 bg-white/40 border border-white/60 rounded-xl hover:bg-white/60 transition-all"><Type className="w-5 h-5 text-slate-600" /></button>
-            </div>
-
-            <div className="text-center mb-8 z-10 relative max-w-3xl mx-auto">
-              <motion.div initial={{ y: -20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2 }} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/50 border border-white/60 mb-6 backdrop-blur-sm shadow-sm">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                <span className="text-sm font-semibold text-slate-600">System Online</span>
-              </motion.div>
-
-              <motion.div
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-                className="cursor-pointer inline-block p-2"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                  <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 mb-4 tracking-tight">
-                    Sahayak <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-600">Neo</span>
-                  </h1>
-              </motion.div>
-
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 }} className="text-xl md:text-2xl text-slate-600 font-medium max-w-xl mx-auto mt-2">
-                {greeting}
-              </motion.p>
-            </div>
-
-            {/* INPUT SECTION */}
-            <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.8 }} className="relative w-full max-w-2xl group z-20">
-              <div className={`absolute -inset-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl opacity-20 blur transition duration-500 ${isListening ? 'opacity-50 animate-pulse' : 'group-hover:opacity-40'}`}></div>
-              <div className="relative">
-                <textarea 
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder={isListening ? "Listening..." : "What's on your mind?"}
-                  className={`w-full h-40 pl-6 pr-6 py-6 rounded-[1.4rem] bg-white/80 backdrop-blur-xl border border-white/50 shadow-xl text-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 resize-none transition-all ${isListening ? 'bg-indigo-50/50' : ''}`}
-                />
-                
-                <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center">
-                    <div className="flex gap-2">
-                        <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all">
-                            <Camera className="w-5 h-5" />
-                        </button>
-                        <button className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all">
-                             <Search className="w-5 h-5" />
-                        </button>
+             <button onClick={() => setShowAccessMenu(!showAccessMenu)} className="p-3 bg-white/20 border border-current rounded-xl hover:bg-white/40 backdrop-blur-sm transition-all text-current"><Eye className="w-5 h-5" /></button>
+             
+             <AnimatePresence>
+               {showAccessMenu && (
+                 <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute right-0 top-14 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 p-4 z-[60]">
+                    <h3 className="font-bold text-slate-800 mb-2 text-xs uppercase tracking-wider">Visual Mode</h3>
+                    <div className="grid grid-cols-1 gap-2 mb-4">
+                       {Object.keys(ACCESSIBILITY_MODES).map(m => ( 
+                           <button key={m} onClick={() => setAccessMode(m)} className={`text-left px-3 py-2 rounded-lg text-sm font-medium ${accessMode === m ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                             {ACCESSIBILITY_MODES[m].label}
+                           </button> 
+                       ))}
                     </div>
+                    <h3 className="font-bold text-slate-800 mb-2 text-xs uppercase tracking-wider">Voice Style</h3>
+                    <div className="flex gap-2">
+                        <button onClick={() => setVoiceType('asmr')} className={`flex-1 py-2 rounded-lg text-xs font-bold ${voiceType === 'asmr' ? 'bg-pink-100 text-pink-700 border border-pink-300' : 'bg-slate-100 text-slate-500'}`}>Stimulating</button>
+                        <button onClick={() => setVoiceType('neutral')} className={`flex-1 py-2 rounded-lg text-xs font-bold ${voiceType === 'neutral' ? 'bg-blue-100 text-blue-700 border border-blue-300' : 'bg-slate-100 text-slate-500'}`}>Neutral</button>
+                    </div>
+                 </motion.div>
+               )}
+             </AnimatePresence>
+           </div>
+
+           <button onClick={() => setPanicMode(true)} className="p-3 bg-red-500 text-white rounded-xl hover:bg-red-600 shadow-lg animate-pulse" title="Panic Mode"><Activity className="w-5 h-5" /></button>
+           
+           <button onClick={() => router.push('/profile')} className="p-3 bg-white/40 backdrop-blur-sm border border-current rounded-xl hover:bg-white/60 transition-all text-current">
+              <User className="w-5 h-5" />
+           </button>
+        </div>
+
+        {/* === TOAST === */}
+        <AnimatePresence>{message && <motion.div initial={{ y: -50 }} animate={{ y: 0 }} exit={{ y: -50 }} className="fixed top-6 left-1/2 -translate-x-1/2 z-[250] bg-slate-800 text-white px-6 py-3 rounded-full font-bold shadow-xl flex items-center gap-2"><Sparkles className="w-4 h-4 text-yellow-400" /> {message}</motion.div>}</AnimatePresence>
+
+        {/* === OPTIMIZED SMOOTH LOADING (Fade instead of Scroll) === */}
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <motion.div 
+              key="splash" 
+              exit={{ opacity: 0 }} 
+              className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black"
+            >
+               <div className="relative flex flex-col items-center justify-center w-full">
+                  
+                  {/* Subtle Glow */}
+                  <motion.div 
+                    animate={{ 
+                      opacity: [0.1, 0.3, 0.1],
+                      scale: [1, 1.05, 1]
+                    }}
+                    transition={{ 
+                      duration: 3, 
+                      repeat: Infinity, 
+                      ease: "easeInOut" 
+                    }}
+                    className="absolute w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl"
+                  />
+
+                  {/* Smooth Text Fader (Fixed Position) */}
+                  <div className="h-32 flex items-center justify-center z-10 w-full relative">
+                     <AnimatePresence mode="wait">
+                       <motion.span
+                         key={greetings[greetingIndex]}
+                         initial={{ opacity: 0, scale: 0.95 }}
+                         animate={{ opacity: 1, scale: 1 }}
+                         exit={{ opacity: 0, scale: 1.05 }}
+                         transition={{ duration: 0.5, ease: "easeInOut" }}
+                         className="text-6xl md:text-8xl font-light text-white tracking-[0.2em] absolute"
+                       >
+                          {greetings[greetingIndex]}
+                       </motion.span>
+                     </AnimatePresence>
+                  </div>
+
+                  {/* Progress Line */}
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: "200px" }}
+                    transition={{ duration: 2.5, ease: "linear" }}
+                    className="mt-20 h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"
+                  />
+                  
+                  <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.4 }}
+                    className="mt-4 text-xs font-bold uppercase tracking-[0.6em] text-indigo-200"
+                  >
+                    Neural Syncing
+                  </motion.p>
+               </div>
+            </motion.div>
+          ) : (
+            <motion.main key="home" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="min-h-screen flex flex-col items-center justify-center p-6 text-center">
+              
+              <div className="max-w-3xl w-full">
+                <h1 className="text-5xl md:text-7xl font-extrabold mb-4 tracking-tight">NeuroSpeak</h1>
+                <p className="text-xl opacity-70 mb-12">The workspace that adapts to your brain.</p>
+
+                <div className="relative w-full max-w-2xl mx-auto mb-12 group">
+                  <textarea 
+                    value={input} 
+                    onChange={(e) => setInput(e.target.value)} 
+                    placeholder="What needs to be done?" 
+                    className={`w-full h-40 p-6 rounded-[2rem] shadow-xl text-xl resize-none outline-none transition-all
+                      ${accessMode === 'highContrast' 
+                        ? 'bg-black border-2 border-yellow-400 text-yellow-400 placeholder:text-yellow-700' 
+                        : 'bg-white/60 border border-slate-200 focus:bg-white focus:ring-4 focus:ring-blue-100'
+                      }`} 
+                  />
+                  <div className="absolute bottom-4 right-4">
+                     <button onClick={toggleVoiceInput} className={`p-4 rounded-full shadow-lg transition-all ${isListening ? 'bg-red-500 text-white animate-pulse' : 'bg-white text-slate-700 hover:bg-slate-100'}`}>
+                        {isListening ? <Mic /> : <MicOff />}
+                     </button>
+                  </div>
+                </div>
+
+                <div className="max-w-2xl mx-auto space-y-6">
+                    <EnergyCrystals value={energyLevel} onChange={setEnergyLevel} mode={accessMode} />
+                    
+                    <button onClick={handleStart} disabled={!input.trim()} className={`w-full py-5 rounded-2xl font-bold text-xl shadow-xl transition-all flex items-center justify-center gap-3
+                        ${accessMode === 'highContrast' ? 'bg-yellow-400 text-black hover:bg-white' : 'bg-slate-800 text-white hover:bg-slate-900'}
+                        disabled:opacity-50 disabled:cursor-not-allowed`}
+                    >
+                        <Zap className={accessMode === 'highContrast' ? 'fill-black' : 'fill-yellow-400 text-yellow-400'} /> 
+                        Break It Down
+                    </button>
+
+                    <button onClick={() => setShowRecharge(!showRecharge)} className="text-sm font-bold opacity-60 hover:opacity-100 uppercase tracking-widest mt-8">
+                        {showRecharge ? "Close Dopamine Menu" : "Need a Dopamine Hit?"}
+                    </button>
+
+                    {/* === FINGERPRINT MOVED OUTSIDE === */}
+                    {/* This ensures it's visible when the menu is CLOSED, allowing you to open it */}
+                    {!showRecharge && (
+                        <div className="mt-4">
+                            <HoldToConnect onUnlock={handleUnlock} mode={accessMode} />
+                        </div>
+                    )}
 
                     <AnimatePresence>
-                        {input && (
-                            <motion.button 
-                                initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
-                                onClick={() => setInput('')}
-                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
-                            >
-                                <Trash2 className="w-5 h-5" />
-                            </motion.button>
+                        {showRecharge && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button onClick={() => setActiveFeature('breathe')} className="group p-6 bg-gradient-to-br from-teal-50 to-emerald-50 border border-teal-100 rounded-3xl flex flex-col items-center gap-3 hover:scale-[1.02] transition-all shadow-sm">
+                                        <div className="p-3 bg-white rounded-full shadow-sm"><Wind className="text-teal-500 w-6 h-6" /></div>
+                                        <div><span className="block font-bold text-teal-900">Breathe</span><span className="text-xs text-teal-600">Quick Zen Mode</span></div>
+                                    </button>
+                                    <button onClick={() => setActiveFeature('hydrate')} className="group p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-100 rounded-3xl flex flex-col items-center gap-3 hover:scale-[1.02] transition-all shadow-sm">
+                                        <div className="p-3 bg-white rounded-full shadow-sm"><Droplets className="text-blue-500 w-6 h-6" /></div>
+                                        <div><span className="block font-bold text-blue-900">Hydrate</span><span className="text-xs text-blue-600">Quick Refresh</span></div>
+                                    </button>
+                                    <button onClick={() => setActiveFeature('music')} className="group p-6 bg-gradient-to-br from-green-50 to-lime-50 border border-green-100 rounded-3xl flex flex-col items-center gap-3 hover:scale-[1.02] transition-all shadow-sm">
+                                        <div className="p-3 bg-white rounded-full shadow-sm"><Music className="text-green-500 w-6 h-6" /></div>
+                                        <div><span className="block font-bold text-green-900">Music</span><span className="text-xs text-green-600">Focus Beats</span></div>
+                                    </button>
+                                    <button onClick={() => setActiveFeature('youtube')} className="group p-6 bg-gradient-to-br from-red-50 to-pink-50 border border-red-100 rounded-3xl flex flex-col items-center gap-3 hover:scale-[1.02] transition-all shadow-sm">
+                                        <div className="p-3 bg-white rounded-full shadow-sm"><Youtube className="text-red-500 w-6 h-6" /></div>
+                                        <div><span className="block font-bold text-red-900">Videos</span><span className="text-xs text-red-600">Satisfying Visuals</span></div>
+                                    </button>
+                                </div>
+                            </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
               </div>
-            </motion.div>
+            </motion.main>
+          )}
+        </AnimatePresence>
 
-            {/* CONTROLS ROW */}
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="w-full max-w-2xl mt-6 z-10 flex flex-col gap-6">
-                <div className="flex gap-4 items-center">
-                   
-                   <motion.button 
-                      onClick={toggleVoiceInput}
-                      whileTap={{ scale: 0.95 }}
-                      className={`relative w-20 h-12 rounded-2xl flex items-center justify-center transition-all shadow-md border border-white/50 ${isListening ? 'bg-indigo-600 text-white shadow-indigo-200' : 'bg-white/60 text-slate-600 hover:bg-white/80'}`}
-                   >
-                      {isListening && <span className="absolute inset-0 rounded-2xl animate-ping bg-indigo-500 opacity-30"></span>}
-                      {isListening ? <Mic className="w-6 h-6 animate-bounce" /> : <MicOff className="w-6 h-6" />}
-                   </motion.button>
+        {/* === MODAL OVERLAY === */}
+        <AnimatePresence>
+          {activeFeature && (
+            <div className="fixed inset-0 z-[200] bg-black/40 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setActiveFeature(null)}>
+               <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[2rem] w-full max-w-sm overflow-hidden relative shadow-2xl" onClick={e => e.stopPropagation()}>
+                  <button onClick={() => setActiveFeature(null)} className="absolute top-4 right-4 p-2 bg-slate-100 rounded-full hover:bg-slate-200"><X size={20} /></button>
+                  {activeFeature === 'breathe' && <BreathingModal onClose={() => setActiveFeature(null)} />}
+                  {activeFeature === 'hydrate' && (
+                      <div className="p-8 text-center">
+                          <h3 className="text-xl font-bold mb-4">Hydration Station</h3>
+                          <div className="space-y-3">
+                              <button onClick={() => triggerToast("💧 Logged Water")} className="w-full p-4 border rounded-xl hover:bg-blue-50 font-bold flex items-center justify-center gap-2"><Droplets size={18} /> Ice Water</button>
+                              <button onClick={() => triggerToast("🍵 Logged Tea")} className="w-full p-4 border rounded-xl hover:bg-green-50 font-bold flex items-center justify-center gap-2"><Coffee size={18} /> Green Tea</button>
+                          </div>
+                      </div>
+                  )}
+                  {activeFeature === 'music' && (
+                      <div className="p-8 text-center">
+                          <h3 className="text-xl font-bold mb-4">Focus Music</h3>
+                          <div className="space-y-3">
+                              <button onClick={() => openLink('https://open.spotify.com')} className="w-full p-4 bg-[#1DB954] text-white rounded-xl font-bold hover:opacity-90">Open Spotify</button>
+                              <button onClick={() => openLink('https://music.youtube.com')} className="w-full p-4 bg-[#FF0000] text-white rounded-xl font-bold hover:opacity-90">YouTube Music</button>
+                          </div>
+                      </div>
+                  )}
+                  {activeFeature === 'youtube' && (
+                      <div className="p-8 text-center">
+                          <h3 className="text-xl font-bold mb-4">Visual Stim</h3>
+                          <div className="space-y-3">
+                              <button onClick={() => openLink('https://www.youtube.com/results?search_query=satisfying+video')} className="w-full p-4 border rounded-xl hover:bg-purple-50 font-bold">Satisfying Loops</button>
+                              <button onClick={() => openLink('https://www.youtube.com/results?search_query=asmr+nature')} className="w-full p-4 border rounded-xl hover:bg-teal-50 font-bold">Nature ASMR</button>
+                          </div>
+                      </div>
+                  )}
+               </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
 
-                   <div className="flex-1 bg-white/60 backdrop-blur-md rounded-2xl p-1 shadow-lg border border-white/50">
-                      <LiquidEnergySlider value={energyLevel} onChange={setEnergyLevel} />
-                   </div>
-
-                </div>
-
-                <button disabled={!input} onClick={handleStart} className="w-full bg-slate-900 text-white py-5 rounded-2xl font-bold text-lg shadow-xl shadow-indigo-200 hover:shadow-2xl hover:bg-slate-800 hover:-translate-y-1 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed">
-                  <Sparkles className="w-5 h-5 text-yellow-300" /> Deconstruct Task <ArrowRight className="w-5 h-5" />
-                </button>
-
-                {/* === FUTURISTIC SLIDER ACCESS === */}
-                <div className="pt-8 border-t border-slate-200/60 w-full" id="dopamine-section">
-                
-                  {/* The Slide-to-Unlock Component */}
-                  <div className="mb-6">
-                     <SlideToUnlock onUnlock={handleUnlock} isUnlocked={showDopamine} />
-                  </div>
-
-                  <AnimatePresence>
-                    {showDopamine && (
-                      <motion.div 
-                          initial={{ height: 0, opacity: 0, scale: 0.95 }} 
-                          animate={{ height: "auto", opacity: 1, scale: 1 }} 
-                          exit={{ height: 0, opacity: 0, scale: 0.95 }} 
-                          className="overflow-hidden origin-top"
-                      >
-                         <DopamineMenu /> 
-                         
-                         {/* Close Button */}
-                         <div className="text-center mt-4">
-                            <button onClick={() => setShowDopamine(false)} className="text-xs text-slate-400 hover:text-red-500 font-bold uppercase tracking-wider">
-                               Close Secure Menu
-                            </button>
-                         </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-            </motion.div>
-
-          </motion.main>
-        )}
-      </AnimatePresence>
-    </div>
+        <PanicMode isOpen={panicMode} onClose={() => setPanicMode(false)} />
+      </div>
+    </MotionConfig>
   );
 }

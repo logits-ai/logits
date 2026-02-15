@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 // --- MEMBER B's PROMPT LOGIC ---
 const SYSTEM_PROMPT = `
-Break the task into AT MOST 5 very small steps.
+
 Each step must take less than 2 minutes.
 Steps must NOT repeat.
 Steps must be concrete and immediately doable.
@@ -65,7 +65,7 @@ function processAIResponse(text) {
     .split("\n")
     .map(line => line.replace(/^\d+\.?\s*/, "").trim()) // Remove "1. "
     .filter(Boolean)
-    .slice(0, 5) // Limit to 5 steps
+    .slice(0, 20) // Limit to 5 steps
     .map((step, index) => ({
       id: index + 1,
       text: step.slice(0, 120),
